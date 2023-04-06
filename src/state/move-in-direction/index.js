@@ -13,6 +13,7 @@ import type {
 import moveToNextPlace from './move-to-next-place';
 import moveCrossAxis from './move-cross-axis';
 import whatIsDraggedOver from '../droppable/what-is-dragged-over';
+import { horizontal, vertical } from '../axis';
 
 type Args = {|
   state: DraggingState,
@@ -59,26 +60,43 @@ export default ({ state, type }: Args): ?PublicResult => {
     state.current.page.borderBoxCenter;
   const { draggables, droppables } = state.dimensions;
 
-  return isMovingOnMainAxis
-    ? moveToNextPlace({
+  let result = null;
+  if (isMovingOnMainAxis) {
+    // try to move to next place on main axis
+    result = moveToNextPlace({
+      isMovingForward,
+      previousPageBorderBoxCenter,
+      draggable,
+      destination: isOver,
+      draggables,
+      viewport: state.viewport,
+      previousClientSelection: state.current.client.selection,
+      previousImpact: state.impact,
+      afterCritical: state.afterCritical
+    });
+    if (!result) {
+      result = moveCrossAxis({
         isMovingForward,
         previousPageBorderBoxCenter,
         draggable,
-        destination: isOver,
-        draggables,
-        viewport: state.viewport,
-        previousClientSelection: state.current.client.selection,
-        previousImpact: state.impact,
-        afterCritical: state.afterCritical,
-      })
-    : moveCrossAxis({
-        isMovingForward,
-        previousPageBorderBoxCenter,
-        draggable,
-        isOver,
+        isOver: { ...isOver, axis: isOver.axis.direction === 'horizontal' ? vertical : horizontal },
         draggables,
         droppables,
         viewport: state.viewport,
-        afterCritical: state.afterCritical,
+        afterCritical: state.afterCritical
       });
+    }
+  } else {
+    result = moveCrossAxis({
+      isMovingForward,
+      previousPageBorderBoxCenter,
+      draggable,
+      isOver,
+      draggables,
+      droppables,
+      viewport: state.viewport,
+      afterCritical: state.afterCritical
+    });
+  }
+  return result;
 };
